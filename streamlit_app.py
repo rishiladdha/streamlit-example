@@ -1,40 +1,47 @@
-import altair as alt
-import numpy as np
-import pandas as pd
 import streamlit as st
+import requests
 
-"""
-# Welcome to Streamlit!
+# Set the page configuration for better layout
+st.set_page_config(page_title="Email Analysis", layout="wide")
 
-Edit `/streamlit_app.py` to customize this app to your heart's desire :heart:.
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
+# Function to send POST request to your API
+def send_email_for_analysis(email_body):
+    response = requests.post(
+        'https://ruchai-ansjhewkia-el.a.run.app/predict',  # Replace with your API endpoint
+        json={"email_body": email_body}
+    )
+    if response.status_code == 200:
+        return response.json()
+    else:
+        st.error("Error from API: " + response.text)
+        return None
 
-In the meantime, below is an example of what you can do with just a few lines of code:
-"""
+# Streamlit UI
+st.title("RuchAI - Your Email Mom")
 
-num_points = st.slider("Number of points in spiral", 1, 10000, 1100)
-num_turns = st.slider("Number of turns in spiral", 1, 300, 31)
+# Email body text area
+email_body = st.text_area("Enter the body of the email:", height=300)
 
-indices = np.linspace(0, 1, num_points)
-theta = 2 * np.pi * num_turns * indices
-radius = indices
+# Button to submit email
+if st.button('Get Priority'):
+    if email_body:
+        result = send_email_for_analysis(email_body)
+        if result:
+            # Display summary
+            st.subheader("Summary:")
+            st.write(result.get("summary"))
 
-x = radius * np.cos(theta)
-y = radius * np.sin(theta)
+            # Display label with color based on predicted class
+            predicted_class = result.get("predicted_class")
+            if predicted_class == 0:
+                st.markdown("<h2 style='color: red;'>Urgent</h2>", unsafe_allow_html=True)
+            elif predicted_class == 1:
+                st.markdown("<h2 style='color: yellow;'>Moderate</h2>", unsafe_allow_html=True)
+            elif predicted_class == 2:
+                st.markdown("<h2 style='color: green;'>Low</h2>", unsafe_allow_html=True)
+    else:
+        st.warning("Please enter the email body to analyze.")
 
-df = pd.DataFrame({
-    "x": x,
-    "y": y,
-    "idx": indices,
-    "rand": np.random.randn(num_points),
-})
-
-st.altair_chart(alt.Chart(df, height=700, width=700)
-    .mark_point(filled=True)
-    .encode(
-        x=alt.X("x", axis=None),
-        y=alt.Y("y", axis=None),
-        color=alt.Color("idx", legend=None, scale=alt.Scale()),
-        size=alt.Size("rand", legend=None, scale=alt.Scale(range=[1, 150])),
-    ))
+# Add spacing at the bottom
+st.write("")
+st.write("")
